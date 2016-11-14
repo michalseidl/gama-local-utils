@@ -4,62 +4,30 @@
 """
 Converts MAPA2 format into Gama format (https://www.gnu.org/software/gama/)
 Restriction:
-- data type 1 only
+- data type 1 only - polar data
 - sloupe distance only
 - first telescope position only
-- all station id characters makes UPPER
+- all station id characters will be changed UPPER
 
 """
 
-import sys, math
+import sys
 import lxml.etree as et
-from collections import OrderedDict
 
-def getStDev(type, data):
+import gama.xml as gx
+from settings import XML_SETTINGS
 
-    stDevDir = 60.
-    stDevDist = (15., 2.)
-    stDevZ = 60.
+def getGamaXml(XML_SETTINGS):
 
+    # Init etree Gama XML object
+    gamaLocal = gx.initGamaXml(XML_SETTINGS)
 
-    if type == 'direction':
-        stDev = str(round(stDevDir / (float(data[1])/100.)))
-    elif type == 's-distance':
-        stDev = str(round(stDevDist[0] + stDevDist[1]*float(data[1])/1000))
-    elif type == 'z-angle':
-        stDev = str(round(stDevZ / (float(data[1]) / 100.)))
+    # Add pointObservation element
+    pointsObservations = et.SubElement(gamaLocal.find('network'), 'points-observations')
 
-    return stDev
-
-def getGamaXml():
-
-    XML_SETTINGS = {
-        'XMLNS': 'http://www.gnu.org/software/gama/gama-local',
-        'network': {
-            'axes-xy': "en"
-        },
-        'description': "XML input of points and observation data for the program GNU Gama",
-        'parameters': {
-            'sigma-apr': "10",
-            'conf-pr': "0.9999999",
-            'tol-abs': "1000",
-            'sigma-act': "aposteriori",
-            'update-constrained-coordinates': "no"
-        }
-    }
-
-    DOCTYPE = '<?xml version="1.0">'
-
-    # xml header
-    gamaLocal = et.Element('gama-local', xmlns=XML_SETTINGS['XMLNS'])
-    network = et.SubElement(gamaLocal, 'network', attrib=XML_SETTINGS['network'])
-    description = et.SubElement(network, 'description')
-    description.text = XML_SETTINGS['description']
-    parameters = et.SubElement(network, 'parameters', attrib=XML_SETTINGS['parameters'])
-    pointsObservation = et.SubElement(network, 'points-observations')
-
-    ro = 200/math.pi
+    # Point ids
     pointSet = set()
+    # Measured data
     dataList = list()
 
     for line in sys.stdin:
@@ -100,35 +68,18 @@ def getGamaXml():
     pointList.sort(key=lambda x: x[0])
 
     for point in pointList:
-        et.SubElement(pointsObservation, 'point',
-            attrib=OrderedDict([('id', point.upper()), ('adj', 'xyz')]))
+        point = gx.addPointEl(pointsObservations,point)
 
     for data in dataList:
-
-        obs = et.SubElement(pointsObservation, 'obs',
-            attrib=OrderedDict([('from', data[0]),('from_dh', data[1])]))
+        obs = gx.addObsEl(pointsObservations, data)
 
         for meas in data[2]:
-
-            direction = et.SubElement(obs, 'direction',
-                attrib=OrderedDict([('to', meas[0]),('val', meas[3]),('stdev', getStDev('direction',meas))]))
-
-        #            distance = et.SubElement(obs, 'distance',
-        #                attrib=OrderedDict([('to', data[0]),
-        #                    ("val", str(float(data[1])*math.sin(float(data[4])/ro))),("stdev", '10')]))
-
-
-            s_distance = et.SubElement(obs, 's-distance',
-                attrib=OrderedDict([('to', meas[0]),("to_dh", meas[2]),
-                    ("val", meas[1]),("stdev", getStDev('s-distance',meas))]))
-
-            z_angle = et.SubElement(obs, 'z-angle',
-                attrib=OrderedDict([('to', meas[0]),("to_dh", meas[2]),
-                    ("val", meas[4]),("stdev", getStDev('z-angle',meas))]))
-
+            direction = gx.addDirEl(obs, meas)
+            s_distance = gx.addSdistEl(obs, meas)
+            z_angle = gx.addZangleEl(obs, meas)
 
     xml = et.tostring(gamaLocal, pretty_print=True, xml_declaration=True, encoding="UTF-8").decode()
     sys.stdout.write(xml)
 
 if __name__ == "__main__":
-    getGamaXml()
+    getGamaXml(XML_SETTINGS)

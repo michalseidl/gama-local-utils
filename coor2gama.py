@@ -11,9 +11,11 @@ Restriction:
 
 import sys
 import lxml.etree as et
-from collections import OrderedDict
 
-def parseCoorStdin():
+import gama.xml as gx
+from settings import XML_SETTINGS, pointSettings
+
+def __parseCoorStdin():
     """
     Reads coors from STDIN
     :return: dataList
@@ -36,27 +38,15 @@ def parseCoorStdin():
 
     return dataList
 
-def coor2gamaXml(gamaXmlFilePath):
+def coor2gamaXml(gamaXmlFilePath, pointSettings):
     """
     Merges coors with existing Gama XML
     :param gamaXmlFilePath:
+    :param pointSettings:
     :return: gamaXml to STDOUT
     """
 
-    pointList = parseCoorStdin()
-
-    pointSettings = {
-        '1P25': {'fix': 'xy', 'adj': 'Z'},
-        '2P5': {'fix': 'xy', 'adj': 'Z'},
-        '8P5': {'fix': 'xy', 'adj': 'Z'},
-        '23': {'fix': 'xy', 'adj': 'Z'},
-        '533': {'fix': 'xy', 'adj': 'Z'},
-        '536': {'fix': 'xy', 'adj': 'Z'},
-        '507': {'fix': 'xy', 'adj': 'Z'},
-        '8P9': {'fix': 'xy', 'adj': 'Z'},
-        '604': {'fix': 'xy', 'adj': 'Z'},
-        '612': {'fix': 'xy', 'adj': 'Z'}
-    }
+    pointList = __parseCoorStdin()
 
     gamaLocal = et.parse(gamaXmlFilePath)
 
@@ -64,60 +54,30 @@ def coor2gamaXml(gamaXmlFilePath):
 
     for pointXml in gamaLocal.findall('.//gama-local:point', namespaces=NSMAP):
         for point in pointList:
-            if pointXml.get('id') == point[0]:
 
-                # Clear all attributes and set new one
-                # BUG lxml clear influence intendation
-                # pointXml.clear()
-                #pointXml.set('id',point[0])
-                if 'fix' in pointXml.attrib:
-                    pointXml.attrib.pop('fix')
-                if 'adj' in pointXml.attrib:
-                    pointXml.attrib.pop('adj')
-
-                pointXml.set('x', point[1])
-                pointXml.set('y', point[2])
-                pointXml.set('z', point[3])
-
-                # Set settings from pointSettings
-                if pointXml.get('id') in pointSettings:
-                    if 'fix' in pointSettings[pointXml.get('id')]:
-                        pointXml.set('fix', pointSettings[pointXml.get('id')]['fix'])
-                    if 'adj' in pointSettings[pointXml.get('id')]:
-                        pointXml.set('adj', pointSettings[pointXml.get('id')]['adj'])
-
-                # Set default settings
-                else:
-                    pointXml.set('adj', 'XYZ')
+            gx.updatePointEl(pointXml, point, pointSettings)
 
     xml = et.tostring(gamaLocal, pretty_print=True, xml_declaration=True, encoding="UTF-8").decode()
     sys.stdout.write(xml)
 
-def getGamaXml():
+def getGamaXml(XML_SETTINGS):
     """
     Generates new Gama XML only with coordinates
     :return: gamaXml to STDOUT
     """
 
-    DOCTYPE = '<?xml version="1.0">'
-    XMLNS = 'http://www.gnu.org/software/gama/gama-local'
+    # Init etree Gama XML object
+    gamaLocal = gx.initGamaXml(XML_SETTINGS)
 
-    # xml header
-    gamaLocal = et.Element('gama-local', xmlns=XMLNS)
-    network = et.SubElement(gamaLocal, 'network', attrib={'axes-xy':"en"})
-    description = et.SubElement(network, 'description')
-    description.text = "XML input of points and observation data for the program GNU Gama"
-    parameters = et.SubElement(network, 'parameters', attrib={'sigma-act':"aposteriori"})
-    pointsObservation = et.SubElement(network, 'points-observations')
+    pointsObservations = et.SubElement(gamaLocal.find('network'), 'points-observations')
 
-    pointList = parseCoorStdin()
+    pointList = __parseCoorStdin()
 
     for data in pointList:
 
         # Point data
         if len(data) > 3:
-            point = et.SubElement(pointsObservation, 'point',
-                attrib=OrderedDict([('id', data[0].upper()),("x", data[1]),("y", data[2]),("z", data[3]),("adj", 'XYZ')]))
+            gx.addPointEl(pointsObservations, data)
 
     xml = et.tostring(gamaLocal, pretty_print=True, xml_declaration=True, encoding="UTF-8").decode()
     sys.stdout.write(xml)
@@ -126,6 +86,6 @@ if __name__ == "__main__":
 
     if len(sys.argv) == 2:
         gamaXmlFilePath = sys.argv[1]
-        coor2gamaXml(gamaXmlFilePath)
+        coor2gamaXml(gamaXmlFilePath, pointSettings)
     else:
-        getGamaXml()
+        getGamaXml(XML_SETTINGS)
