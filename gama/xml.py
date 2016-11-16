@@ -103,7 +103,7 @@ def addDirEl(obs, data):
     """
     Adds dir to obs element
     :param pointsObservations:
-    :param data:
+    :param data: list [to, dist, th, dir, zangle]
     :return: dirEl
     """
 
@@ -116,7 +116,7 @@ def addDistEl(obs, data):
     """
     Adds horiz. distance to obs element, expects slope distance in data
     :param pointsObservations:
-    :param data:
+    :param data: list [to, dist, th, dir, zangle]
     :return: distEl
     """
 
@@ -130,7 +130,7 @@ def addSdistEl(obs, data):
     """
     Adds slope distance to obs element
     :param pointsObservations:
-    :param data:
+    :param data: list [to, dist, th, dir, zangle]
     :return: sDistEl
     """
 
@@ -144,12 +144,12 @@ def addZangleEl(obs, data):
     """
     Adds zenit angle to obs element
     :param pointsObservations:
-    :param data:
+    :param data: list [to, dist, th, dir, zangle]
     :return: zAngletEl
     """
 
     zAngleEl = et.SubElement(obs, 'z-angle',
         attrib=OrderedDict([('to', data[0]), ('to_dh', data[2]),
-            ("val", data[1]), ("stdev", utils.getStdDev('z-angle', data))]))
+            ("val", data[4]), ("stdev", utils.getStdDev('z-angle', data))]))
 
     return zAngleEl

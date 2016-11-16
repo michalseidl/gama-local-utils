@@ -8,7 +8,13 @@ pointSettings = {
     '507': {'fix': 'xy', 'adj': 'Z'},
     '8P9': {'fix': 'xy', 'adj': 'Z'},
     '604': {'fix': 'xy', 'adj': 'Z'},
-    '612': {'fix': 'xy', 'adj': 'Z'}
+    '611': {'fix': 'xy', 'adj': 'Z'}
+}
+
+COOR_SETTINGS = {
+    'xMax': 0.05,
+    'yMax': 0.05,
+    'zMax': 0.05
 }
 
 XML_SETTINGS = {

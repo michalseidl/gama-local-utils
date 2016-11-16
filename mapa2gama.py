@@ -64,8 +64,8 @@ def getGamaXml(XML_SETTINGS):
             # End of file
             # if -2
 
-    pointList = list(pointSet)
-    pointList.sort(key=lambda x: x[0])
+
+    pointList = sorted(pointSet)
 
     for point in pointList:
         point = gx.addPointEl(pointsObservations,point)
